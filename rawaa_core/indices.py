@@ -3,13 +3,21 @@
 The Python functions are the reference implementation used in the tests; the JavaScript evalscript sent to
 Copernicus is generated from the same constants, and the tests run it in Node to prove both give identical results.
 
-Inputs are L2A surface reflectances (0–1, Sentinel Hub "REFLECTANCE" units).
+Spectral inputs are L2A surface reflectances (0–1, Sentinel Hub "REFLECTANCE" units). SCL and dataMask are requested
+in "DN" units: SCL class codes 0–11 exist only as DN, and Copernicus rejects the script if SCL is asked for in
+REFLECTANCE.
+
+Statistical API rules the evalscript follows (Copernicus Data Space Ecosystem, Sentinel Hub documentation):
+- each output is aggregated over the pixels its mask keeps; a NaN that is not masked turns the whole mean into NaN;
+- the dataMask output may carry one named band per output, so every output gets its own mask (OUTPUT_MASKS below).
+
+v2 never produced a reading: it asked for SCL in REFLECTANCE units and was rejected with HTTP 400.
 """
 from __future__ import annotations
 import hashlib
 import math
 
-PROCESSING_VERSION = 'rawaa-s2-v2'
+PROCESSING_VERSION = 'rawaa-s2-v3'
 COLLECTION = 'sentinel-2-l2a'
 
 # Scene Classification Layer (SCL) classes from the L2A processor (ESA Sen2Cor).
@@ -73,11 +81,27 @@ def pixel_is_clear(scl: int, data_mask: int = 1) -> bool:
     return data_mask == 1 and int(scl) not in SCL_EXCLUDED
 
 
+INPUT_BANDS = ('B02', 'B03', 'B04', 'B05', 'B08', 'B8A', 'B11', 'SCL', 'dataMask')
+INPUT_UNITS = ('REFLECTANCE',) * 7 + ('DN', 'DN')
+OUTPUTS = ('ndvi', 'ndmi', 'ndwi', 'savi', 'ndre', 'salinity', 'valid', 'veg', 'ndvi_veg')
+# The pixels each output is aggregated over (its band in the evalscript's dataMask output):
+#   clear     inside the polygon, with data, SCL class not excluded
+#   data      inside the polygon, with data, any SCL class (so the mean of `valid` is the clear share)
+#   vegetated clear and NDVI >= VEGETATION_NDVI_MIN
+# `veg` is averaged over clear pixels, so veg_fraction is the vegetated share of the area that could be seen.
+OUTPUT_MASKS = {'ndvi': 'clear', 'ndmi': 'clear', 'ndwi': 'clear', 'savi': 'clear', 'ndre': 'clear',
+                'salinity': 'clear', 'valid': 'data', 'veg': 'clear', 'ndvi_veg': 'vegetated'}
+
+
 def evaluate_pixel(px: dict) -> dict:
-    """Python twin of the evalscript's evaluatePixel (NaN for excluded pixels)."""
+    """Python twin of the evalscript's evaluatePixel: one value per output (NaN where the output does not apply)
+    and `dataMask`, the per-output masks in OUTPUTS order."""
+    has_data = px.get('dataMask', 1) == 1
     good = pixel_is_clear(px['SCL'], px.get('dataMask', 1))
     nan = float('nan')
     v = ndvi(px['B04'], px['B08'])
+    vegetated = good and v >= VEGETATION_NDVI_MIN
+    masks = {'clear': int(good), 'data': int(has_data), 'vegetated': int(vegetated)}
     return {
         'ndvi': v if good else nan,
         'ndmi': ndmi(px['B08'], px['B11']) if good else nan,
@@ -86,36 +110,45 @@ def evaluate_pixel(px: dict) -> dict:
         'ndre': ndre(px['B05'], px['B8A']) if good else nan,
         'salinity': salinity(px['B02'], px['B04']) if good else nan,
         'valid': 1 if good else 0,
-        'veg': 1 if (good and v >= VEGETATION_NDVI_MIN) else 0,
-        'ndvi_veg': v if (good and v >= VEGETATION_NDVI_MIN) else nan,
+        'veg': 1 if vegetated else 0,
+        'ndvi_veg': v if vegetated else nan,
+        'dataMask': [masks[OUTPUT_MASKS[k]] for k in OUTPUTS],
     }
 
 
 def build_evalscript() -> str:
     excluded = ','.join(str(c) for c in SCL_EXCLUDED)
+    bands = ','.join(f'"{b}"' for b in INPUT_BANDS)
+    units = ','.join(f'"{u}"' for u in INPUT_UNITS)
+    outputs = ',\n              '.join(f'{{id:"{k}",bands:1,sampleType:"FLOAT32"}}' for k in OUTPUTS)
+    mask_names = ','.join(f'"{k}"' for k in OUTPUTS)
+    js_mask = {'clear': 'c', 'data': 'm', 'vegetated': 'g'}
+    mask_values = ','.join(js_mask[OUTPUT_MASKS[k]] for k in OUTPUTS)
     return f'''//VERSION=3
 // RAWAA {PROCESSING_VERSION}: per-acquisition statistics inside the park polygon.
 // SCL classes excluded: [{excluded}] (no data, defective, shadows, water, clouds, cirrus, snow).
+// Spectral bands in REFLECTANCE (0-1); SCL and dataMask in DN. Each output has its own mask (a named band of the
+// dataMask output): clear pixels for the indices and veg, every pixel with data for valid, vegetated pixels for ndvi_veg.
 function setup() {{
-  return {{ input: [{{bands:["B02","B03","B04","B05","B08","B8A","B11","SCL","dataMask"], units:"REFLECTANCE"}}],
-    output: [ {{id:"ndvi",bands:1,sampleType:"FLOAT32"}}, {{id:"ndmi",bands:1,sampleType:"FLOAT32"}},
-              {{id:"ndwi",bands:1,sampleType:"FLOAT32"}}, {{id:"savi",bands:1,sampleType:"FLOAT32"}},
-              {{id:"ndre",bands:1,sampleType:"FLOAT32"}}, {{id:"salinity",bands:1,sampleType:"FLOAT32"}},
-              {{id:"valid",bands:1,sampleType:"FLOAT32"}}, {{id:"veg",bands:1,sampleType:"FLOAT32"}},
-              {{id:"ndvi_veg",bands:1,sampleType:"FLOAT32"}}, {{id:"dataMask",bands:1}} ] }};
+  return {{ input: [{{bands:[{bands}],
+             units:[{units}]}}],
+    output: [ {outputs},
+              {{id:"dataMask",bands:[{mask_names}]}} ] }};
 }}
 var EXCLUDED = [{excluded}];
 function nd(a,b){{ return (a+b)!==0 ? (a-b)/(a+b) : 0; }}
 function evaluatePixel(s) {{
-  var good = s.dataMask===1 && EXCLUDED.indexOf(s.SCL)===-1;
+  var data = s.dataMask===1;
+  var good = data && EXCLUDED.indexOf(s.SCL)===-1;
   var N = NaN;
   var v = nd(s.B08,s.B04);
   var d = s.B08+s.B04+{SAVI_L};
   var sv = d!==0 ? {1 + SAVI_L}*(s.B08-s.B04)/d : 0;
   var veg = good && v>={VEGETATION_NDVI_MIN};
+  var c = good?1:0, m = data?1:0, g = veg?1:0;
   return {{ndvi:[good?v:N], ndmi:[good?nd(s.B08,s.B11):N], ndwi:[good?nd(s.B03,s.B08):N], savi:[good?sv:N],
           ndre:[good?nd(s.B8A,s.B05):N], salinity:[good?Math.sqrt(Math.max(0,s.B02*s.B04)):N],
-          valid:[good?1:0], veg:[veg?1:0], ndvi_veg:[veg?v:N], dataMask:[s.dataMask]}};
+          valid:[c], veg:[g], ndvi_veg:[veg?v:N], dataMask:[{mask_values}]}};
 }}
 '''
 

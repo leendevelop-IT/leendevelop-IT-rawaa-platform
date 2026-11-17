@@ -1,5 +1,7 @@
 """End-to-end: satellite readings → validation → analysis → priority → alert → task → follow-up, plus security."""
 import json
+import shutil
+import subprocess
 from datetime import date, timedelta
 
 import pytest
@@ -178,6 +180,25 @@ def test_sync_endpoint_with_mocked_copernicus(core, reg, monkeypatch):
     # second sync of the same period → upsert, no duplicate rows
     reg.post(f'/api/areas/{aid}/sync-satellite', json={'start_date': (today - timedelta(days=300)).isoformat(), 'end_date': today.isoformat()})
     assert len(reg.get(f'/api/areas/{aid}/observations').json()) == 8
+
+
+@pytest.mark.skipif(shutil.which('node') is None, reason='node not installed')
+def test_thermal_evalscript_masks_unusable_pixels(core):
+    """Land-surface temperature: units Copernicus accepts, and cloud-cold pixels kept out of the mean (not NaN)."""
+    pixels = [{'B04': 0.05, 'B05': 0.35, 'B10': 310.0, 'dataMask': 1},   # vegetated, usable
+              {'B04': 0.05, 'B05': 0.35, 'B10': 250.0, 'dataMask': 1},   # too cold: likely cloud
+              {'B04': 0.0, 'B05': 0.0, 'B10': float('nan'), 'dataMask': 0}]  # no data (Landsat gives NaN bands)
+    js = (core.LST_EVALSCRIPT + '\nconst px=' + json.dumps(pixels).replace('NaN', 'null') +
+          ';px[2].B10=NaN;\nconsole.log(JSON.stringify({setup:setup(),rows:px.map(p=>{const r=evaluatePixel(p);'
+          'return {lst:Number.isNaN(r.lst[0])?null:r.lst[0],valid:r.valid[0],mask:r.dataMask};})}));')
+    out = json.loads(subprocess.run(['node', '-e', js], capture_output=True, text=True, check=True).stdout)
+    inp = out['setup']['input'][0]
+    assert dict(zip(inp['bands'], inp['units']))['B10'] == 'BRIGHTNESS_TEMPERATURE'
+    assert next(o for o in out['setup']['output'] if o['id'] == 'dataMask')['bands'] == ['lst', 'valid']
+    usable, cold, nodata = out['rows']
+    assert usable['mask'] == [1, 1] and 35 < usable['lst'] < 40   # ≈ 37.6 °C for 310 K with emissivity 0.99
+    assert cold['mask'] == [0, 1] and cold['valid'] == 0          # counts against the usable share only
+    assert nodata['mask'] == [0, 0]
 
 
 def test_dashboard_and_legacy_endpoints_still_work(reg, op):

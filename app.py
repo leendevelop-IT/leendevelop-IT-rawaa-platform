@@ -1361,16 +1361,18 @@ def sentinel_tile(layer:str,z:int,x:int,y:int,req:Request,month:str='',cc:int=30
 LST_EVALSCRIPT = """//VERSION=3
 // Land-surface temperature (°C) from Landsat 8/9 TIRS band 10 brightness temperature (Kelvin),
 // corrected with NDVI-based emissivity (single-channel method). Cold pixels (<270 K, likely cloud) are excluded.
-function setup(){return {input:[{bands:["B04","B05","B10","dataMask"]}],
-  output:[{id:"lst",bands:1,sampleType:"FLOAT32"},{id:"valid",bands:1,sampleType:"FLOAT32"},{id:"dataMask",bands:1}]};}
+// Per-output masks (named bands of dataMask): lst averages usable pixels only, so a masked NaN never reaches the
+// mean; valid averages every pixel with data, so its mean is the usable share.
+function setup(){return {input:[{bands:["B04","B05","B10","dataMask"],units:["REFLECTANCE","REFLECTANCE","BRIGHTNESS_TEMPERATURE","DN"]}],
+  output:[{id:"lst",bands:1,sampleType:"FLOAT32"},{id:"valid",bands:1,sampleType:"FLOAT32"},{id:"dataMask",bands:["lst","valid"]}]};}
 function evaluatePixel(s){
-  let bt=s.B10, ok=s.dataMask===1 && bt>270 && bt<345;
-  if(!ok) return {lst:[NaN],valid:[0],dataMask:[s.dataMask]};
+  let m=s.dataMask===1?1:0, bt=s.B10, ok=m===1 && bt>270 && bt<345;
+  if(!ok) return {lst:[NaN],valid:[0],dataMask:[0,m]};
   let ndvi=(s.B05+s.B04)!==0?(s.B05-s.B04)/(s.B05+s.B04):0;
   let pv=Math.pow(Math.min(1,Math.max(0,(ndvi-0.2)/0.3)),2);
   let e= ndvi<0?0.991 : ndvi<0.2?0.966 : ndvi>0.5?0.99 : 0.004*pv+0.986;
   let lst=bt/(1+(10.895*bt/14388)*Math.log(e));
-  return {lst:[lst-273.15],valid:[1],dataMask:[s.dataMask]};
+  return {lst:[lst-273.15],valid:[1],dataMask:[1,m]};
 }"""
 
 def _ring_polygon(polygon,margin=0.003):
