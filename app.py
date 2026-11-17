@@ -1437,6 +1437,11 @@ def sync_satellite(area_id:int,v:Sync,req:Request):
         thermal_saved=sync_thermal(area_id,polygon,start,end,tok)
     except Exception as ex:  # thermal is optional; vegetation readings are already saved
         thermal_err=str(ex)[:200]
+        log.warning('Thermal sync failed for area %s: %s',area_id,thermal_err)
+    log.info('Copernicus sync area %s (%s to %s): %s months saved (%s reliable, %s limited, %s unreliable) from %s acquisition days, '
+             '%s usable; %s thermal intervals%s',area_id,start,end,saved,report['reliable'],report['limited'],skipped,
+             report['acquisition_days'],report['usable_days'],thermal_saved,
+             f"; catalog error: {report['catalog_error']}" if report.get('catalog_error') else '')
     try:
         pipeline=_intel.run_pipeline('after_sync',u['id'])
     except Exception as ex:
