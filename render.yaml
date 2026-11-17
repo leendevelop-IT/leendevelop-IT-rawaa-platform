@@ -1,0 +1,54 @@
+# Render Blueprint for RAWAA | رَوَاء
+# Creates one Python web service and one Render Postgres database in the same region.
+# No secrets live in this file: values marked "sync: false" are entered in the Render Dashboard.
+#
+# The names are deliberately distinct ("rawaa-platform"), so this Blueprint never matches,
+# adopts or changes an existing service called "rawaa" in the same Render workspace.
+#
+# NOTE: a Free Render Postgres database expires 30 days after creation (then a 14-day grace
+# period before deletion). Upgrade it to a paid instance type, or point DATABASE_URL at another
+# PostgreSQL provider (e.g. Neon) before then. See README.md.
+services:
+  - type: web
+    name: rawaa-platform
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT --proxy-headers
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL
+        fromDatabase:
+          name: rawaa-platform-db
+          property: connectionString
+      - key: RAWAA_SECURE_COOKIE
+        value: "1"
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+      - key: RAWAA_AUTO_PIPELINE
+        value: "1"
+      - key: RAWAA_PIPELINE_HOURS
+        value: "12"
+      - key: RAWAA_LOG_LEVEL
+        value: INFO
+      # Copernicus Data Space OAuth client (needed for real Sentinel-2 / Landsat readings).
+      # Leave empty at first if you do not have it yet; add it later under Environment.
+      - key: COPERNICUS_CLIENT_ID
+        sync: false
+      - key: COPERNICUS_CLIENT_SECRET
+        sync: false
+      # Uncomment to turn off the demo role switcher for real (non-demo) use:
+      # - key: RAWAA_ENV
+      #   value: production
+
+databases:
+  - name: rawaa-platform-db
+    plan: free
+    region: frankfurt
+    databaseName: rawaa
+    user: rawaa
+    postgresMajorVersion: "16"   # the version RAWAA was tested on
+    ipAllowList: []   # no access from the internet; only Render services in the same region

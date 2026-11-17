@@ -1,0 +1,10 @@
+.venv/
+venv/
+.env
+__pycache__/
+dist/
+.pytest_cache/
+# Runtime folders in the project root only (the local SQLite DB and the photo cache).
+# Anchored with "/" so that static/media/ (the site images) is NOT ignored.
+/data/
+/media/
