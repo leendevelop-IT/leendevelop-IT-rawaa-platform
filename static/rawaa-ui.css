@@ -1,3 +1,4 @@
+/* ui-refine-ignore-file overused-face -- DM Sans and Tajawal are the original project's brand faces; kept on purpose */
 /* RAWAA — refined UI for the park details page and "Predictions & Monitoring Schedule".
    Scoped to .rw so the rest of the platform is untouched. Uses the platform's own theme tokens
    (--accent, --green, --bg) and adds a small semantic palette for status colours. */
@@ -77,7 +78,6 @@ html[data-theme="dark"] .rw{
 
 /* ================================================================ park details page */
 .rw-hero{position:relative;padding:22px 26px 22px;margin-bottom:16px;overflow:hidden;--rw-pc:var(--rw-n-dot)}
-.rw-hero::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:var(--rw-pc)}
 .rw-hero.u{--rw-pc:var(--rw-u-dot)}.rw-hero.f{--rw-pc:var(--rw-f-dot)}.rw-hero.s{--rw-pc:var(--rw-s-dot)}
 .rw-hero-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .rw-hero-summary{margin:16px 0 0;font-size:19px;line-height:1.75;font-weight:700;color:var(--rw-ink);letter-spacing:-.1px;max-width:1040px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -91,7 +91,7 @@ html[data-theme="dark"] .rw{
 .rw-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:16px}
 .rw-kpi{padding:18px 20px 16px;display:flex;flex-direction:column;gap:8px;min-height:138px;min-width:0}
 .rw-kpi-label{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--rw-muted)}
-.rw-kpi-label .tip{width:16px;height:16px;font-size:10px}
+.rw-kpi-label .tip{width:16px;height:16px;font-size:11px}
 .rw-kpi-main{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
 .rw-kpi-value{font:700 30px/1.15 'DM Sans',sans-serif;letter-spacing:-.6px;color:var(--rw-ink);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:4px}
 .rw-kpi-value.bad{color:var(--rw-u)}.rw-kpi-value.warn{color:var(--rw-f)}.rw-kpi-value.good{color:var(--rw-s)}
@@ -117,7 +117,7 @@ html[data-theme="dark"] .rw{
 .rw-chart .g{stroke:var(--rw-line);stroke-width:1}
 .rw-chart .tk{fill:var(--rw-muted);font:500 11px 'DM Sans',Tajawal,sans-serif}
 .rw-chart .exp-t{fill:var(--rw-sub);font-weight:600}
-.rw-chart .yr{font-size:10px;opacity:.75}
+.rw-chart .yr{font-size:11px;opacity:.75}
 .rw-chart .act{fill:none;stroke:var(--rw-act);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
 .rw-chart .pt{fill:var(--rw-card);stroke:var(--rw-act);stroke-width:1.8}
 .rw-chart .pt.last{fill:var(--rw-act)}
@@ -172,7 +172,7 @@ html[data-theme="dark"] .rw{
 .rw-stat.u{--rw-pc:var(--rw-u-dot)}.rw-stat.f{--rw-pc:var(--rw-f-dot)}.rw-stat.s{--rw-pc:var(--rw-s-dot)}
 .rw-stat-top{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;color:var(--rw-sub)}
 .rw-stat-top i{width:8px;height:8px;border-radius:50%;background:var(--rw-pc)}
-.rw-stat-num{display:flex;align-items:baseline;gap:6px;font:700 34px/1 'DM Sans',sans-serif;color:var(--rw-ink);letter-spacing:-1px}
+.rw-stat-num{display:flex;align-items:baseline;gap:6px;font:700 34px/1 'DM Sans',sans-serif;color:var(--rw-ink);letter-spacing:-.02em}
 .rw-stat-num small{font:600 14px 'DM Sans',sans-serif;color:var(--rw-muted);letter-spacing:0}
 .rw-stat-bar{display:block;height:4px;border-radius:99px;background:var(--rw-soft);overflow:hidden}
 .rw-stat-bar i{display:block;height:100%;background:var(--rw-pc);border-radius:99px}
@@ -200,9 +200,9 @@ html[data-theme="dark"] .rw{
 .rw-arrow{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--rw-n-bg);color:var(--rw-n)}
 .rw-arrow.down{color:var(--rw-u);background:var(--rw-u-bg)}.rw-arrow.up{color:var(--rw-s);background:var(--rw-s-bg)}.rw-arrow.none{opacity:.6}
 [dir="rtl"] .rw-arrow:not(.none) svg{transform:scaleX(-1)}
-.rw-prob{display:inline-block;font-size:11.5px;font-weight:700;color:var(--rw-u);background:var(--rw-u-bg);padding:2px 8px;border-radius:6px;width:max-content}
-.rw-sched{display:inline-flex;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--rw-n-bg);color:var(--rw-n);width:max-content}
-.rw-sched.done{color:var(--rw-s);background:var(--rw-s-bg)}.rw-sched.prog{color:var(--rw-f);background:var(--rw-f-bg)}.rw-sched.late{color:var(--rw-u);background:var(--rw-u-bg)}
+.rw-prob{display:inline-block;font-size:12px;font-weight:700;color:var(--rw-u);width:max-content}
+.rw-sched{display:inline-flex;font-size:12px;font-weight:700;color:var(--rw-n);width:max-content}
+.rw-sched.done{color:var(--rw-s)}.rw-sched.prog{color:var(--rw-f)}.rw-sched.late{color:var(--rw-u)}
 .rw-row:nth-last-child(-n+2):not(:nth-child(-n+3)) .rw-menu-list{top:auto;bottom:calc(100% + 6px)}
 .rw-bottom{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;margin-top:16px;align-items:start}
 .rw-acc{padding:20px 22px}
@@ -318,3 +318,15 @@ html[data-theme="dark"] .rw-drawer{box-shadow:0 0 80px rgba(0,0,0,.6)}
  .rw-kv{grid-template-columns:1fr}
  .rw-drawer{width:100vw}
  .rw-dr-body{padding:18px 16px 24px}}
+
+/* 2026-11 refinement: reasons print as one line of metadata, not a row of pills */
+.rw-facts{display:flex;flex-wrap:wrap;gap:6px 18px;margin:12px 0 0;padding:0;list-style:none;font-size:13.5px;font-weight:600;line-height:1.5;color:var(--rw-sub)}
+.rw-facts li{display:inline-flex;align-items:center;gap:6px}
+.rw-facts li svg{flex:none;opacity:.85}
+.rw-facts li.bad{color:var(--rw-u)}
+.rw-facts li.warn{color:var(--rw-f)}
+.rw-facts li.good{color:var(--rw-s)}
+.rw-flag{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--rw-sub)}
+.rw-flag.warn{color:var(--rw-f)}
+.rw-yes{display:inline-flex;color:var(--rw-s)}
+.rw-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}

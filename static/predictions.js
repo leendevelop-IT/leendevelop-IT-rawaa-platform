@@ -63,7 +63,7 @@ const bndTag=s=>{const m=BND[s]||['n','—','—'];return `<span class="rw-bnd $
 const schTag=s=>{if(!s)return '';const m=SCH[s.status]||['',s.status,s.status];return s.overdue&&s.status==='scheduled'?`<span class="rw-sched late">${L2('متأخر','Overdue')}</span>`:`<span class="rw-sched ${m[0]}">${L2(m[1],m[2])}</span>`};
 const trendBox=dir=>{const k=dir==='declining'?'down':dir==='improving'?'up':'flat';return `<span class="rw-arrow ${k}" title="${L2({down:'تراجع متوقع',up:'تحسّن متوقع',flat:'استقرار متوقع'}[k],{down:'Expected decline',up:'Expected improvement',flat:'Expected stable'}[k])}">${rwIcon(k,16)}</span>`};
 const rwTip=text=>`<button type="button" class="tip" data-action="tip" aria-label="${esc(text)}" data-tip="${esc(text)}">!</button>`;
-const chipsHtml=c=>c.map(([cls,txt,ic])=>`<span class="rw-chip ${cls}">${ic?rwIcon(ic,14):''}<span>${txt}</span></span>`).join('');
+const chipsHtml=c=>c.length?`<ul class="rw-facts">${c.map(([cls,txt,ic])=>`<li class="${cls}">${ic?rwIcon(ic,14):''}<span>${txt}</span></li>`).join('')}</ul>`:'';
 const skel=(w,h,extra='')=>`<div class="rw-skel" style="width:${w};height:${h}px;${extra}"></div>`;
 
 function rwMenu(items,opt={}){items=items.filter(Boolean);if(!items.length)return '';
@@ -233,7 +233,7 @@ function predDrawer(dr){const src=PM.intel||PM.stale.intel,x=src?.areas.find(a=>
   <div class="span2"><small>${L2('احتمال استمرار التراجع','Chance the decline continues')}</small><b class="${f.decline_probability_pct>=50?'rw-bad':''}">${f.decline_probability_pct!=null?pct(f.decline_probability_pct):'—'}</b><span>${f.decline_probability_pct!=null?L2('خلال 30 يومًا مقارنة بالقراءة الحالية','within 30 days, vs the current reading'):esc(ar()?f.decline_probability_reason_ar||'':f.decline_probability_reason_en||'')}</span></div></div>`
   :`<p>${esc(ar()?f.reason_ar:f.reason_en)}</p>`;
  const rel=REL[d.reliability]||REL.low,meta=[['',`${L2('موثوقية القراءة','Reading reliability')} ${L2(rel[0],rel[1])}`,'shield'],...(d.provisional&&d.priority!=='insufficient'?[['warn',L2('نتيجة مبدئية · الحدود غير معتمدة','Provisional · boundary not approved'),'pin']]:[])];
- const body=`<p class="rw-dr-summary">${rwSummary(d)}</p><div class="rw-why">${chipsHtml([...meta,...rwWhy(d)])}</div>${tiles}
+ const body=`<p class="rw-dr-summary">${rwSummary(d)}</p>${chipsHtml([...meta,...rwWhy(d)])}${tiles}
  <section class="rw-dsec"><div class="rw-sec-row"><h4>${L2('الاتجاه والتوقع','Trend & outlook')}</h4>${chartLegend(d.expected_ndvi!=null,d.baseline_kind)}</div>${c?rwChart(c.intel.series,f,d.expected_ndvi,{h:230,w:720,fit:fitDrawer,expLabel:expLabel(d)}):`<div class="rw-skel" style="height:200px"></div>`}</section>
  <section class="rw-dsec"><h4>${L2('موثوقية التوقع','Forecast reliability')}</h4>${conf}</section>
  <section class="rw-dsec"><h4>${L2('سبب التصنيف','Reasons for this status')}</h4><ul class="rw-ul">${(ar()?d.reasons_ar:d.reasons_en).map(r=>`<li>${esc(r)}</li>`).join('')}</ul></section>
@@ -249,7 +249,7 @@ function predDrawer(dr){const src=PM.intel||PM.stale.intel,x=src?.areas.find(a=>
 async function pmReadingsModal(id){const rows=await api(`/areas/${id}/observations`);
  openModal(`${modalHeader(L2('سجل القراءات','Readings log'),L2('كل قراءة مع مصدرها وجودتها وسبب استبعادها إن وُجد. اضغط «المصدر» لعرض طريقة الحساب.','Every reading with origin, quality and exclusion reason.'))}
  <div class="table-wrap" style="max-height:420px;overflow:auto"><table class="data-table"><thead><tr><th>${L2('التاريخ','Date')}</th><th>NDVI</th><th>${L2('صالح %','Valid %')}</th><th>${L2('المصدر','Origin')}</th><th>${L2('الموثوقية','Reliability')}</th><th>${L2('في التحليل','Used')}</th><th></th></tr></thead><tbody>
- ${rows.slice().reverse().map(r=>`<tr><td>${esc((r.acquired_at||r.measured_at).slice(0,10))}</td><td>${num(r.ndvi)}</td><td>${r.valid_pixels_pct??'—'}</td><td>${esc(r.origin)}<br><small class="muted">${esc(r.source)}</small></td><td>${esc(r.reliability)}</td><td>${r.used_in_analysis?'✓':`<small class="muted">${esc(r.excluded_reason||'')}</small>`}</td><td>${btn(L2('المصدر','Provenance'),'pm-prov',{id:r.id,class:'tiny'})}</td></tr>`).join('')||`<tr><td colspan="7">${t('empty')}</td></tr>`}</tbody></table></div>
+ ${rows.slice().reverse().map(r=>`<tr><td>${esc((r.acquired_at||r.measured_at).slice(0,10))}</td><td>${num(r.ndvi)}</td><td>${r.valid_pixels_pct??'—'}</td><td>${esc(r.origin)}<br><small class="muted">${esc(r.source)}</small></td><td>${esc(r.reliability)}</td><td>${r.used_in_analysis?`<span class="rw-yes" title="${L2('مستخدمة','Used')}">${rwIcon('check',15)}<span class="rw-sr">${L2('مستخدمة','Used')}</span></span>`:`<small class="muted">${esc(r.excluded_reason||'')}</small>`}</td><td>${btn(L2('المصدر','Provenance'),'pm-prov',{id:r.id,class:'tiny'})}</td></tr>`).join('')||`<tr><td colspan="7">${t('empty')}</td></tr>`}</tbody></table></div>
  <div class="form-actions"><button type="button" class="btn" data-action="close-modal">${t('cancel')}</button></div>`)}
 async function pmProvModal(id){const p=await api(`/observations/${id}/provenance`);
  openModal(`${modalHeader(L2('كيف حُسبت هذه القراءة','How this reading was computed'),`${esc(p.source)} · ${esc((p.acquired_at||p.measured_at||'').slice(0,10))}`)}

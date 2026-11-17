@@ -34,13 +34,13 @@ function parkSkeleton(){return `<section class="rw-card rw-hero n">${skel('150px
 function heroCta(a,reg){const al=(S.data.alerts||[]).find(x=>x.area_id===a.id&&x.status==='new'),tk=(S.data.tasks||[]).find(x=>x.area_id===a.id&&x.status!=='closed');
  if(tk)return `<button type="button" class="btn" data-view="tasks">${icon('clipboard-list',15)} ${L2('مهمة','Task')} #${tk.id} · ${esc(t(tk.status))}</button>`;
  if(al&&reg)return `<button type="button" class="btn primary" data-action="assign" data-id="${al.id}">${icon('clipboard-list',15)} ${L2('إسناد مهمة للمقاول','Assign to contractor')}</button>`;
- if(al)return `<span class="rw-chip warn">${icon('bell',14)}<span>${L2('تنبيه مفتوح','Open alert')}</span></span>`;
+ if(al)return `<span class="rw-flag warn">${icon('bell',14)}<span>${L2('تنبيه مفتوح','Open alert')}</span></span>`;
  return ''}
 
 function parkHero(a,c,reg){const d=c.intel.decision,m=PRI[d.priority]||PRI.insufficient,rel=REL[d.reliability]||REL.low;
- const top=`${pill(d.priority,'lg')}<span class="rw-chip">${rwIcon('shield',14)}<span>${L2('موثوقية','Reliability')} ${L2(rel[0],rel[1])}</span></span>${d.provisional&&d.priority!=='insufficient'?`<span class="rw-chip warn">${rwIcon('pin',14)}<span>${L2('نتيجة مبدئية · الحدود غير معتمدة','Provisional · boundary not approved')}</span></span>`:''}`;
+ const top=`${pill(d.priority,'lg')}<span class="rw-flag">${rwIcon('shield',14)}<span>${L2('موثوقية','Reliability')} ${L2(rel[0],rel[1])}</span></span>${d.provisional&&d.priority!=='insufficient'?`<span class="rw-flag warn">${rwIcon('pin',14)}<span>${L2('نتيجة مبدئية · الحدود غير معتمدة','Provisional · boundary not approved')}</span></span>`:''}`;
  return `<section class="rw-card rw-hero ${m.cls}"><div class="rw-hero-top">${top}<span class="rw-grow"></span><button type="button" class="btn rw-open" data-action="pm-drawer-open" data-id="${a.id}">${rwIcon('panel',16)} ${L2('عرض التحليل الكامل','View full analysis')}</button></div>
- <p class="rw-hero-summary">${rwSummary(d)}</p><div class="rw-why">${chipsHtml(rwWhy(d))}</div>
+ <p class="rw-hero-summary">${rwSummary(d)}</p>${chipsHtml(rwWhy(d))}
  <div class="rw-action"><span class="rw-action-ic">${icon('wrench',17)}</span><div class="rw-grow"><small>${L2('الإجراء المقترح','Suggested action')}</small><b>${esc(rwShortAction(d))}</b></div>${heroCta(a,reg)}</div></section>`}
 
 function kpi(label,tipText,main,sub){return `<div class="rw-card rw-kpi"><div class="rw-kpi-label">${label}${tipText?rwTip(tipText):''}</div>${main}<div class="rw-kpi-sub">${sub}</div></div>`}
